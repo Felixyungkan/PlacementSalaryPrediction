@@ -24,7 +24,6 @@ class StudentData(BaseModel):
     attendance_percentage: float
     backlogs: int
     extracurricular_activities: str
-    academic_score: float
 
 @app.get("/")
 def root():

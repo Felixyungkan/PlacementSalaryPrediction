@@ -1,19 +1,18 @@
 import streamlit as st
-import joblib
+import requests
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
-clf = joblib.load('artifacts/xgb_classifier.pkl')
-reg = joblib.load('artifacts/linear_regression.pkl')
+# Buat hubungin dengan api.py
+API_URL = "http://localhost:8000/predict"
 
-st.set_page_config(page_title="Placement Prediction", layout="wide")
+st.set_page_config(page_title="Placement Prediction (Decoupled)", layout="wide")
 st.title("Student Placement & Salary Prediction")
+st.markdown("### *Decoupled Architecture: Streamlit Frontend + FastAPI Backend*")
 st.markdown("---")
 
 left_col, right_col = st.columns([1.2, 1], gap="medium")
 
-# Input Data 
 with left_col:
     st.markdown("### Student Information")
     
@@ -39,69 +38,68 @@ with left_col:
         extracurricular = st.selectbox("Extracurricular Activities", ["Yes", "No"])
 
 
-input_data = pd.DataFrame([{
-    'gender': gender,
-    'ssc_percentage': ssc,
-    'hsc_percentage': hsc,
-    'degree_percentage': degree,
-    'cgpa': cgpa,
-    'entrance_exam_score': entrance,
-    'technical_skill_score': tech_skill,
-    'soft_skill_score': soft_skill,
-    'internship_count': internship,
-    'live_projects': live_projects,
-    'work_experience_months': work_exp,
-    'certifications': certifications,
-    'attendance_percentage': attendance,
-    'backlogs': backlogs,
-    'extracurricular_activities': extracurricular
-}])
+payload = {
+    "gender": gender,
+    "ssc_percentage": ssc,
+    "hsc_percentage": hsc,
+    "degree_percentage": degree,
+    "cgpa": cgpa,
+    "entrance_exam_score": entrance,
+    "technical_skill_score": tech_skill,
+    "soft_skill_score": soft_skill,
+    "internship_count": internship,
+    "live_projects": live_projects,
+    "work_experience_months": work_exp,
+    "certifications": certifications,
+    "attendance_percentage": attendance,
+    "backlogs": backlogs,
+    "extracurricular_activities": extracurricular
+}
 
-#Prediction + Visualization
 with right_col:
-    st.markdown("### Prediction")
+    st.markdown("### Prediction via FastAPI")
     
-    # Button to trigger prediction
     if st.button("Predict Placement & Salary", use_container_width=True):
-        placement_pred = clf.predict(input_data)[0]
-        
-        st.markdown("---")
-        st.subheader("Placement Result")
-        if placement_pred == 1:
-            st.success("Student is likely to be **PLACED**")
-            salary_pred = reg.predict(input_data)[0]
-            st.subheader("Predicted Salary Package")
-            st.info(f"**{salary_pred:.2f} LPA**")
-        else:
-            st.error("Student is likely **NOT to be placed**")
-            salary_pred = 0.0
-            st.subheader("Predicted Salary Package")
-            st.info(f"**{salary_pred:.2f} LPA** (Not placed)")
-  
+        try:
+            response = requests.post(API_URL, json=payload)
+            if response.status_code == 200:
+                result = response.json()
+                placement = result["placement_status"]
+                salary = result["predicted_salary_lpa"]
+                
+                st.markdown("---")
+                st.subheader("Placement Result")
+                if placement == 1:
+                    st.success("Student is likely to be **PLACED**")
+                    st.subheader("Predicted Salary Package")
+                    st.info(f"**{salary:.2f} LPA**")
+                else:
+                    st.error("Student is likely **NOT to be placed**")
+                    st.subheader("Predicted Salary Package")
+                    st.info(f"**{salary:.2f} LPA** (Not placed)")
+            else:
+                st.error(f"Error from API: {response.status_code} - {response.text}")
+        except requests.exceptions.ConnectionError:
+            st.error("Cannot connect to FastAPI server. Make sure it's running at " + API_URL)
     
     st.markdown("---")
     st.markdown("### Data Visualization")
     
-    # Visualisasi
     scores_df = pd.DataFrame({
-        'Metric': ['SSC %', 'HSC %', 'Degree %', 'CGPA (scaled)', 
+        'Metric': ['SSC %', 'HSC %', 'Degree %', 'CGPA (scaled)',
                    'Technical Skill', 'Soft Skill', 'Entrance Exam', 'Attendance'],
-        'Value': [ssc, hsc, degree, cgpa*10, tech_skill, soft_skill, entrance, attendance],
-        'Max Score': [100, 100, 100, 100, 100, 100, 100, 100]
+        'Value': [ssc, hsc, degree, cgpa*10, tech_skill, soft_skill, entrance, attendance]
     })
     
-    # pake Bar chart dengan library Plotly
-    fig = px.bar(scores_df, x='Metric', y='Value', 
+    fig = px.bar(scores_df, x='Metric', y='Value',
                  title='Student Performance Metrics',
                  labels={'Value': 'Score (%)'},
                  color='Value', color_continuous_scale='Blues',
                  text='Value')
     fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
-    fig.update_layout(showlegend=False, height=450, 
+    fig.update_layout(showlegend=False, height=450,
                       xaxis_tickangle=-45,
                       yaxis_range=[0, 105])
     st.plotly_chart(fig, use_container_width=True)
     
-    
-        
-# python -m streamlit run app.py
+    st.caption("Frontend: Streamlit | Backend: FastAPI (Model prediction via API)")

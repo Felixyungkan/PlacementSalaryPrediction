@@ -3,7 +3,7 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).parent
 
-RAW_DIR = BASE_DIR #/folder
+RAW_DIR = BASE_DIR /"raw"
 INGESTED_DIR = BASE_DIR /"ingested"
 
 INPUT_FILE = RAW_DIR / "B.csv"
@@ -22,3 +22,6 @@ def ingest_data():
 
 if __name__ == "__main__":
     ingest_data()
+
+# menyimpan data yang sudah melalui tahap ingestion 
+# swbelum masuk ke proses lebih lanjut, agar data asli tidak ikut keubah.

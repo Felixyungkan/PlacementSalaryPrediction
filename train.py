@@ -20,9 +20,14 @@ from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score
 )
 
+# hapus kolon student id
+def drop_student_id(X):
+    if 'student_id' in X.columns:
+        X = X.drop('student_id', axis=1)
+    return X
 
+# Standard Scaler+ OHE
 def build_preprocessor(X):
-
     cat_feat = X.select_dtypes(include=['object']).columns.tolist()
     num_feat = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
 
@@ -39,8 +44,14 @@ def build_preprocessor(X):
         ('cat', categorical_pipeline, cat_feat)
     ])
 
+
+# Train model kalsifikasi pake XGBoost classifier
+
 @mlflow.trace(name="training", span_type="FUNCTION")
 def train_classifier(X_train, y_train_c, X_test, y_test_c):
+    # Hapus student_id dari data
+    X_train = drop_student_id(X_train)
+    X_test = drop_student_id(X_test)
 
     preprocess = build_preprocessor(X_train)
 
@@ -56,9 +67,7 @@ def train_classifier(X_train, y_train_c, X_test, y_test_c):
     ])
 
     mlflow.set_experiment("Placement Classifier")
-
     with mlflow.start_run() as run:
-
         clf.fit(X_train, y_train_c)
         y_pred_class = clf.predict(X_test)
 
@@ -78,8 +87,13 @@ def train_classifier(X_train, y_train_c, X_test, y_test_c):
 
     return run.info.run_id, clf
 
+
+# Train Regresi pake linear regression
 @mlflow.trace(name="training", span_type="FUNCTION")
 def train_regressor(X_train, y_train_r, X_test, y_test_r):
+    # Hapus student_id dari data
+    X_train = drop_student_id(X_train)
+    X_test = drop_student_id(X_test)
 
     idx_train = y_train_r > 0
     idx_test = y_test_r > 0
@@ -97,9 +111,7 @@ def train_regressor(X_train, y_train_r, X_test, y_test_r):
     ])
 
     mlflow.set_experiment("Salary Regressor")
-
     with mlflow.start_run() as run:
-
         reg.fit(X_train_reg, y_train_reg)
         y_pred_reg = reg.predict(X_test_reg)
 

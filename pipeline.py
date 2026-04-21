@@ -19,14 +19,17 @@ def run_pipeline():
     y_class = df['placement_status']
     y_reg = df['salary_package_lpa']
 
+    # Split data 80:20
     x_train, x_test, y_train_class, y_test_class, y_train_reg, y_test_reg = train_test_split(
         X,
         y_class,
         y_reg,
-        test_size=0.25,
+        test_size=0.2,
         random_state=42,
         stratify=y_class
     )
+
+    # Masuk ke train.py buat train classifier dan regressor nya
 
     print("Step 2: Training Classifier")
     mlflow.set_experiment("Placement Classifier")
@@ -40,6 +43,7 @@ def run_pipeline():
         x_train, y_train_reg, x_test, y_test_reg
     )
 
+    # Masuk ke evaluation.py
     print("Step 4: Evaluation")
     acc, f1, r2, mae = evaluate(
         x_test, y_test_class, y_test_reg, run_id_clf, run_id_reg
